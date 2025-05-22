@@ -4,8 +4,9 @@ public class Enemy {
     private int x, y;
     private int health;
     private boolean alive;
+    private boolean isBoss;
 
-    public Enemy(int x, int y, int health) {
+    public Enemy(int x, int y, int health, boolean isBoss) {
         try {
             if (health <= 0) {
                 throw new IllegalArgumentException("Enemy health must be positive");
@@ -14,12 +15,14 @@ public class Enemy {
             this.y = y;
             this.health = health;
             this.alive = true;
+            this.isBoss = isBoss;
         } catch (IllegalArgumentException e) {
             System.err.println("Error creating enemy: " + e.getMessage());
-            this.health = 50; // Default health
+            this.health = isBoss ? 100 : 50;
             this.x = x;
             this.y = y;
             this.alive = true;
+            this.isBoss = isBoss;
         }
     }
 
@@ -44,6 +47,10 @@ public class Enemy {
         return alive;
     }
 
+    public boolean isBoss() {
+        return isBoss;
+    }
+
     public void takeDamage(int damage) {
         try {
             if (damage < 0) {
@@ -52,6 +59,9 @@ public class Enemy {
             health -= damage;
             if (health <= 0) {
                 alive = false;
+                System.out.println("Enemy defeated at (" + x + "," + y + ")");
+            } else {
+                System.out.println("Enemy at (" + x + "," + y + ") took " + damage + " damage. Remaining health: " + health);
             }
         } catch (IllegalArgumentException e) {
             System.err.println("Error applying damage: " + e.getMessage());

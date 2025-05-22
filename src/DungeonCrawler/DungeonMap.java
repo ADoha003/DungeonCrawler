@@ -23,7 +23,7 @@ public class DungeonMap {
             this.keyY = -1;
         } catch (IllegalArgumentException e) {
             System.err.println("Error creating dungeon map: " + e.getMessage());
-            this.map = new TileType[10][10]; // Fallback map
+            this.map = new TileType[10][10];
             for (int x = 0; x < 10; x++) {
                 for (int y = 0; y < 10; y++) {
                     this.map[x][y] = TileType.WALL;
@@ -42,7 +42,7 @@ public class DungeonMap {
             return map.length;
         } catch (Exception e) {
             System.err.println("Error getting map width: " + e.getMessage());
-            return 10; // Fallback
+            return 10;
         }
     }
 
@@ -51,7 +51,7 @@ public class DungeonMap {
             return map[0].length;
         } catch (Exception e) {
             System.err.println("Error getting map height: " + e.getMessage());
-            return 10; // Fallback
+            return 10;
         }
     }
 

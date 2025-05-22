@@ -17,7 +17,7 @@ public class DungeonGenerator {
             this.random = new Random(seed);
         } catch (IllegalArgumentException e) {
             System.err.println("Error initializing DungeonGenerator: " + e.getMessage());
-            this.width = 40; // Fallback
+            this.width = 40;
             this.height = 30;
             this.random = new Random(seed);
         }
@@ -92,8 +92,8 @@ public class DungeonGenerator {
     private void addRooms(TileType[][] map, int roomCount) {
         try {
             for (int i = 0; i < roomCount; i++) {
-                int roomWidth = 3 + random.nextInt(5);
-                int roomHeight = 3 + random.nextInt(5);
+                int roomWidth = 5 + random.nextInt(3); // Larger rooms for enemies
+                int roomHeight = 5 + random.nextInt(3);
                 int x = 1 + random.nextInt(width - roomWidth - 2);
                 int y = 1 + random.nextInt(height - roomHeight - 2);
 

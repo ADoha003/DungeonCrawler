@@ -70,6 +70,11 @@ public class StoryTeller {
             if (damages > 5) {
                 storyFragments.add("Your wounds ache as the dungeon's malice grows...");
             }
+
+            int fireballs = dungeonMap.getActionCount("fireball");
+            if (fireballs > 10) {
+                storyFragments.add("The air crackles with the power of your fireballs...");
+            }
         } catch (Exception e) {
             System.err.println("Error checking action stories: " + e.getMessage());
         }
@@ -86,12 +91,16 @@ public class StoryTeller {
         }
     }
 
-    public void addKillStory() {
+    public void addKillStory(boolean isBoss) {
         try {
             if (storyFragments == null) {
                 storyFragments = new ArrayList<>();
             }
-            storyFragments.add("An enemy falls before you, its life extinguished.");
+            if (isBoss) {
+                storyFragments.add("The mighty boss falls, its power broken by your flames!");
+            } else {
+                storyFragments.add("An enemy is consumed by your fireball, reduced to ash.");
+            }
         } catch (Exception e) {
             System.err.println("Error adding kill story: " + e.getMessage());
         }
@@ -102,7 +111,7 @@ public class StoryTeller {
             if (storyFragments == null) {
                 storyFragments = new ArrayList<>();
             }
-            storyFragments.add("With the last enemy defeated, a golden key appears!");
+            storyFragments.add("With the enemies vanquished, a golden key materializes!");
         } catch (Exception e) {
             System.err.println("Error adding key story: " + e.getMessage());
         }
@@ -117,6 +126,16 @@ public class StoryTeller {
         } catch (Exception e) {
             System.err.println("Error getting story fragments: " + e.getMessage());
             return new ArrayList<>();
+        }
+    }
+    public void addStoryFragment(String fragment) {
+        try {
+            if (storyFragments == null) {
+                storyFragments = new ArrayList<>();
+            }
+            storyFragments.add(fragment);
+        } catch (Exception e) {
+            System.err.println("Error adding story fragment: " + e.getMessage());
         }
     }
 }
