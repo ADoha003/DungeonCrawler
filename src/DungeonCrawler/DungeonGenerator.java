@@ -1,6 +1,10 @@
 package DungeonCrawler;
-
+/*
+ * week 5 make the Dungeon Game to be more flexbil to be full size and improve the enemy terettory to be be only in room 
+ * and to make render Sidebar more active with the chat
+ */
 import java.util.Random;
+
 
 public class DungeonGenerator {
     private Random random;
@@ -17,8 +21,8 @@ public class DungeonGenerator {
             this.random = new Random(seed);
         } catch (IllegalArgumentException e) {
             System.err.println("Error initializing DungeonGenerator: " + e.getMessage());
-            this.width = 40;
-            this.height = 30;
+            this.width = 80;  // Increased default size
+            this.height = 60; // Increased default size
             this.random = new Random(seed);
         }
     }

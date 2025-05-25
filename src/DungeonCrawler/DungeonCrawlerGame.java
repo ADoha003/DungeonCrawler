@@ -1,11 +1,17 @@
 package DungeonCrawler;
 
+///////    https://github.com/ADoha003/DungeonCrawler/commits?author=ADoha003
+/*
+ * week 5 make the Dungeon Game to be more flexbil to be full size and improve the enemy terettory to be be only in room 
+ * and to make render Sidebar more active with the chat
+ */
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -21,9 +27,6 @@ public class DungeonCrawlerGame extends Application {
     private static final int SIDEBAR_WIDTH = 300;
     private static final int MAX_LEVELS = 30;
     private static final int FIREBALL_RANGE = 3;
-    private int playerGold = 0; // Track player's gold
-    private int potionCount = 0; // Track number of health potions
-    private int killCounter = 0; // Track kills toward potion reward
     private List<double[]> fireballTrailPositions = new ArrayList<>(); // Store fireball trail positions
     private boolean isFireballAnimating = false; // Track if fireball animation is active
     private long fireballAnimationStartTime = 0; // Track animation start time
@@ -66,15 +69,17 @@ public class DungeonCrawlerGame extends Application {
             lastDirection = 'D'; // Default direction: right
             initializeLevel();
 
-            mapCanvas = new Canvas(MAP_WIDTH, MAP_HEIGHT);
-            sidebarCanvas = new Canvas(SIDEBAR_WIDTH, MAP_HEIGHT);
+            mapCanvas = new Canvas();
+            sidebarCanvas = new Canvas();
 
             BorderPane root = new BorderPane();
             root.setLeft(mapCanvas);
             root.setRight(sidebarCanvas);
 
-            Scene scene = new Scene(root, MAP_WIDTH + SIDEBAR_WIDTH, MAP_HEIGHT);
-
+       
+            Scene scene = new Scene(root);
+            primaryStage.setScene(scene);
+            
             scene.setOnKeyPressed(event -> {
                 if (gameOver) return;
                 
@@ -144,7 +149,28 @@ public class DungeonCrawlerGame extends Application {
             primaryStage.setTitle("Dungeon Crawler - Procedural Adventure");
             primaryStage.setScene(scene);
             primaryStage.show();
-
+         // Enable full screen support
+            primaryStage.setFullScreen(true);
+            primaryStage.setFullScreenExitHint("Press ESC to exit full screen");
+            primaryStage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH); // Disable default exit key
+            mapCanvas.setWidth(primaryStage.getWidth() - SIDEBAR_WIDTH);
+            mapCanvas.setHeight(primaryStage.getHeight());
+            sidebarCanvas.setWidth(SIDEBAR_WIDTH);
+            sidebarCanvas.setHeight(primaryStage.getHeight());
+            primaryStage.widthProperty().addListener((obs, oldVal, newVal) -> {
+                double newWidth = newVal.doubleValue() - SIDEBAR_WIDTH;
+                mapCanvas.setWidth(newWidth);
+                sidebarCanvas.setWidth(SIDEBAR_WIDTH);
+                updateGame();
+            });
+            
+            primaryStage.heightProperty().addListener((obs, oldVal, newVal) -> {
+                double newHeight = newVal.doubleValue();
+                mapCanvas.setHeight(newHeight);
+                sidebarCanvas.setHeight(newHeight);
+                updateGame();
+            });
+            
             updateGame();
             
         } catch (Exception e) {
@@ -297,9 +323,12 @@ public class DungeonCrawlerGame extends Application {
     private boolean isValidSpawn(int x, int y) {
         try {
             return x >= 0 && x < dungeonMap.getWidth() &&
-                    y >= 0 && y < dungeonMap.getHeight() &&
-                    dungeonMap.getTileType(x, y) == TileType.ROOM &&
-                    !isEnemyAt(x, y) && !(x == playerX && y == playerY);
+                   y >= 0 && y < dungeonMap.getHeight() &&
+                   dungeonMap.getTileType(x, y) == TileType.ROOM &&
+                   !isEnemyAt(x, y) && 
+                   !(x == playerX && y == playerY) &&
+                   // Ensure spawn is at least 5 tiles away from player
+                   (Math.abs(x - playerX) > 5 || Math.abs(y - playerY) > 5);
         } catch (Exception e) {
             System.err.println("Error checking spawn position: " + e.getMessage());
             return false;
@@ -356,38 +385,36 @@ public class DungeonCrawlerGame extends Application {
                 return;
             }
 
-            final int MAX_HEALTH = 100; // Player's maximum health
-            final double REGULAR_ENEMY_DAMAGE_PERCENT = 0.05; // 5% of max health
-            final double BOSS_ENEMY_DAMAGE_PERCENT = 0.15; // 15% of max health
-
             for (Enemy enemy : enemies) {
                 if (enemy == null || !enemy.isAlive()) continue;
 
-                // Random movement
-                int[] directions = {0, 1, 2, 3}; // 0: up, 1: down, 2: left, 3: right
-                int dir = directions[random.nextInt(4)];
-                int newX = enemy.getX();
-                int newY = enemy.getY();
-                switch (dir) {
-                    case 0: newY--; break; // Up
-                    case 1: newY++; break; // Down
-                    case 2: newX--; break; // Left
-                    case 3: newX++; break; // Right
+                // Only move if player is nearby (within 10 tiles)
+                if (Math.abs(enemy.getX() - playerX) > 10 || Math.abs(enemy.getY() - playerY) > 10) {
+                    continue;
                 }
-                if (isValidEnemyMove(newX, newY)) {
-                    enemy.setPosition(newX, newY);
-                    System.out.println("Enemy moved to (" + newX + "," + newY + ")");
+
+                // Calculate direction toward player
+                int dx = Integer.compare(playerX, enemy.getX());
+                int dy = Integer.compare(playerY, enemy.getY());
+
+                // Try to move toward player (either x or y direction)
+                if (random.nextBoolean() && dx != 0) {
+                    int newX = enemy.getX() + dx;
+                    if (isValidEnemyMove(newX, enemy.getY())) {
+                        enemy.setPosition(newX, enemy.getY());
+                    }
+                } else if (dy != 0) {
+                    int newY = enemy.getY() + dy;
+                    if (isValidEnemyMove(enemy.getX(), newY)) {
+                        enemy.setPosition(enemy.getX(), newY);
+                    }
                 }
 
                 // Damage player if adjacent
                 if (Math.abs(enemy.getX() - playerX) + Math.abs(enemy.getY() - playerY) == 1) {
-                    int damage = enemy.isBoss() ? 
-                        (int)(MAX_HEALTH * BOSS_ENEMY_DAMAGE_PERCENT) : 
-                        (int)(MAX_HEALTH * REGULAR_ENEMY_DAMAGE_PERCENT);
+                    int damage = enemy.isBoss() ? 15 : 5;
                     playerHealth -= damage;
                     dungeonMap.recordPlayerAction("damage");
-                    System.out.println("Player took " + damage + " damage from " + 
-                        (enemy.isBoss() ? "boss" : "enemy") + " at (" + enemy.getX() + "," + enemy.getY() + ")");
                     if (playerHealth <= 0) {
                         gameOver = true;
                     }
@@ -449,9 +476,9 @@ public class DungeonCrawlerGame extends Application {
     private boolean isValidEnemyMove(int x, int y) {
         try {
             return x >= 0 && x < dungeonMap.getWidth() &&
-                    y >= 0 && y < dungeonMap.getHeight() &&
-                    dungeonMap.getTileType(x, y) == TileType.ROOM &&
-                    !isEnemyAt(x, y) && !(x == playerX && y == playerY);
+                   y >= 0 && y < dungeonMap.getHeight() &&
+                   dungeonMap.getTileType(x, y) != TileType.WALL &&
+                   !isEnemyAt(x, y) && !(x == playerX && y == playerY);
         } catch (Exception e) {
             System.err.println("Error checking valid enemy move: " + e.getMessage());
             return false;
@@ -476,37 +503,15 @@ public class DungeonCrawlerGame extends Application {
                 return;
             }
 
-            // Find the nearest living enemy within FIREBALL_RANGE
-            Enemy nearestEnemy = null;
-            int minDistance = Integer.MAX_VALUE;
-            for (Enemy enemy : enemies) {
-                if (enemy != null && enemy.isAlive()) {
-                    int distance = Math.abs(enemy.getX() - playerX) + Math.abs(enemy.getY() - playerY);
-                    if (distance <= FIREBALL_RANGE && distance < minDistance) {
-                        nearestEnemy = enemy;
-                        minDistance = distance;
-                    }
-                }
-            }
-
-            if (nearestEnemy == null) {
-                System.out.println("No enemies within range!");
-                errorMessage = "No enemies in range!";
-                updateGame();
-                return;
-            }
-
-            // Determine direction to nearest enemy
+            // Determine fireball direction based on last movement
             int dx = 0, dy = 0;
-            int deltaX = nearestEnemy.getX() - playerX;
-            int deltaY = nearestEnemy.getY() - playerY;
-            // Prioritize larger axis to align with grid movement
-            if (Math.abs(deltaX) >= Math.abs(deltaY)) {
-                dx = deltaX > 0 ? 1 : -1; // Right or left
-            } else {
-                dy = deltaY > 0 ? 1 : -1; // Down or up
+            switch (lastDirection) {
+                case 'W': dy = -1; break; // Up
+                case 'S': dy = 1; break;  // Down
+                case 'A': dx = -1; break; // Left
+                case 'D': dx = 1; break;  // Right
+                default: dx = 1; break;  // Default to right if no direction
             }
-            System.out.println("Targeting enemy at (" + nearestEnemy.getX() + "," + nearestEnemy.getY() + ") with direction dx=" + dx + ", dy=" + dy);
 
             // Clear previous fireball trail
             fireballTrailPositions.clear();
@@ -520,42 +525,40 @@ public class DungeonCrawlerGame extends Application {
                 int targetX = playerX + dx * i;
                 int targetY = playerY + dy * i;
 
-                // Stop if out of bounds or hitting a wall
+                // Check if fireball is going out of bounds
                 if (targetX < 0 || targetX >= dungeonMap.getWidth() ||
-                    targetY < 0 || targetY >= dungeonMap.getHeight() ||
-                    dungeonMap.getTileType(targetX, targetY) == TileType.WALL) {
-                    System.out.println("Fireball stopped at (" + targetX + "," + targetY + ") - Wall or out of bounds");
+                    targetY < 0 || targetY >= dungeonMap.getHeight()) {
+                    System.out.println("Fireball stopped at map boundary");
+                    break;
+                }
+
+                // Stop if hitting a wall
+                if (dungeonMap.getTileType(targetX, targetY) == TileType.WALL) {
+                    System.out.println("Fireball stopped at wall at (" + targetX + "," + targetY + ")");
                     break;
                 }
 
                 // Calculate screen position for rendering
-                int screenX = (targetX - playerX) * TILE_SIZE + MAP_WIDTH / 2 - TILE_SIZE / 2;
-                int screenY = (targetY - playerY) * TILE_SIZE + MAP_HEIGHT / 2 - TILE_SIZE / 2;
+                double screenX = (targetX - playerX) * TILE_SIZE + mapCanvas.getWidth() / 2 - TILE_SIZE / 2;
+                double screenY = (targetY - playerY) * TILE_SIZE + mapCanvas.getHeight() / 2 - TILE_SIZE / 2;
                 fireballTrailPositions.add(new double[]{screenX + TILE_SIZE / 2.0, screenY + TILE_SIZE / 2.0});
-                System.out.println("Added trail position: (" + (screenX + TILE_SIZE / 2.0) + "," + (screenY + TILE_SIZE / 2.0) + ")");
 
                 // Check for enemy hits
-                System.out.println("Fireball at (" + targetX + "," + targetY + ") - Checking for enemies...");
                 for (Enemy enemy : enemies) {
                     if (enemy != null && enemy.isAlive() && 
                         enemy.getX() == targetX && enemy.getY() == targetY) {
                         System.out.println("Hit enemy at (" + targetX + "," + targetY + ")");
                         int damage = 25;
-                        if (i == FIREBALL_RANGE) {
-                            damage *= 2;
-                            storyTeller.addStoryFragment("Critical hit at max range!");
-                        }
+                        if (i == FIREBALL_RANGE) damage *= 2; // Critical hit at max range
                         enemy.takeDamage(damage);
                         hitEnemy = true;
                         dungeonMap.recordPlayerAction("fireball");
                         if (!enemy.isAlive()) {
                             if (enemy.isBoss()) {
                                 bossKilled = true;
-                                dungeonMap.recordPlayerAction("boss_kill");
                                 storyTeller.addKillStory(true);
                             } else {
                                 regularEnemyKills++;
-                                dungeonMap.recordPlayerAction("kill");
                                 storyTeller.addKillStory(false);
                             }
                         }
@@ -565,29 +568,25 @@ public class DungeonCrawlerGame extends Application {
                 if (hitEnemy) break;
             }
 
-            // Start AnimationTimer for fireball trail
-            AnimationTimer fireballAnimation = new AnimationTimer() {
+            // Start fireball animation
+            new AnimationTimer() {
                 private long lastUpdate = 0;
-                private int currentDot = 0;
-
+                
                 @Override
                 public void handle(long now) {
-                    if (now - lastUpdate >= 100_000_000) { // 100ms per dot
-                        if (currentDot < fireballTrailPositions.size()) {
-                            updateGame(); // Redraw map with current dot in renderMap
-                            currentDot++;
+                    if (now - lastUpdate >= 100_000_000) { // 100ms per frame
+                        if (System.currentTimeMillis() - fireballAnimationStartTime < FIREBALL_DISPLAY_DURATION) {
+                            updateGame();
                         } else {
-                            stop(); // End animation
-                            checkKeyPickup();
-                            checkLevelTransition();
-                            moveEnemies(); // Move enemies after fireball resolves
+                            isFireballAnimating = false;
+                            fireballTrailPositions.clear();
+                            this.stop();
                             updateGame();
                         }
                         lastUpdate = now;
                     }
                 }
-            };
-            fireballAnimation.start();
+            }.start();
 
         } catch (Exception e) {
             System.err.println("Error shooting fireball: " + e.getMessage());
@@ -649,8 +648,12 @@ public class DungeonCrawlerGame extends Application {
             if (gc == null) {
                 throw new IllegalStateException("GraphicsContext is null");
             }
+            
+            double canvasWidth = mapCanvas.getWidth();
+            double canvasHeight = mapCanvas.getHeight();
+            
             gc.setFill(Color.BLACK);
-            gc.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+            gc.fillRect(0, 0, canvasWidth, canvasHeight);
 
             // Test shapes to verify rendering
             gc.setFill(Color.BLUE);
@@ -662,15 +665,20 @@ public class DungeonCrawlerGame extends Application {
                 System.out.println("Drawing test red square at (70,50) during fireball animation");
             }
 
-            int startX = Math.max(0, playerX - MAP_WIDTH / TILE_SIZE / 2);
-            int startY = Math.max(0, playerY - MAP_HEIGHT / TILE_SIZE / 2);
-            int endX = Math.min(dungeonMap.getWidth(), playerX + MAP_WIDTH / TILE_SIZE / 2);
-            int endY = Math.min(dungeonMap.getHeight(), playerY + MAP_HEIGHT / TILE_SIZE / 2);
+            int visibleTilesX = (int)(canvasWidth / TILE_SIZE);
+            int visibleTilesY = (int)(canvasHeight / TILE_SIZE);
+            
+            int startX = Math.max(0, playerX - visibleTilesX / 2);
+            int startY = Math.max(0, playerY - visibleTilesY / 2);
+            int endX = Math.min(dungeonMap.getWidth(), playerX + visibleTilesX / 2);
+            int endY = Math.min(dungeonMap.getHeight(), playerY + visibleTilesY / 2);
 
             for (int x = startX; x < endX; x++) {
                 for (int y = startY; y < endY; y++) {
-                    int screenX = (x - playerX) * TILE_SIZE + MAP_WIDTH / 2 - TILE_SIZE / 2;
-                    int screenY = (y - playerY) * TILE_SIZE + MAP_HEIGHT / 2 - TILE_SIZE / 2;
+                    // Calculate screen position relative to center
+                    double screenX = (x - playerX) * TILE_SIZE + canvasWidth / 2 - TILE_SIZE / 2;
+                    double screenY = (y - playerY) * TILE_SIZE + canvasHeight / 2 - TILE_SIZE / 2;
+
 
                     switch (dungeonMap.getTileType(x, y)) {
                         case WALL:
@@ -699,13 +707,21 @@ public class DungeonCrawlerGame extends Application {
                 }
             }
 
+         // In the renderMap method, update the enemy rendering section:
             if (enemies != null) {
                 for (Enemy enemy : enemies) {
                     if (enemy != null && enemy.isAlive()) {
-                        int screenX = (enemy.getX() - playerX) * TILE_SIZE + MAP_WIDTH / 2 - TILE_SIZE / 2;
-                        int screenY = (enemy.getY() - playerY) * TILE_SIZE + MAP_HEIGHT / 2 - TILE_SIZE / 2;
-                        gc.setFill(enemy.isBoss() ? Color.PURPLE : Color.GREEN);
-                        gc.fillRect(screenX + TILE_SIZE / 4, screenY + TILE_SIZE / 4, TILE_SIZE / 2, TILE_SIZE / 2);
+                        // Only render enemies that are within visible area
+                        if (Math.abs(enemy.getX() - playerX) <= visibleTilesX/2 && 
+                            Math.abs(enemy.getY() - playerY) <= visibleTilesY/2) {
+                            
+                            double screenX = (enemy.getX() - playerX) * TILE_SIZE + canvasWidth / 2 - TILE_SIZE / 2;
+                            double screenY = (enemy.getY() - playerY) * TILE_SIZE + canvasHeight / 2 - TILE_SIZE / 2;
+                            
+                            gc.setFill(enemy.isBoss() ? Color.PURPLE : Color.GREEN);
+                            gc.fillRect(screenX + TILE_SIZE / 4, screenY + TILE_SIZE / 4, 
+                                      TILE_SIZE / 2, TILE_SIZE / 2);
+                        }
                     }
                 }
             }
@@ -720,14 +736,14 @@ public class DungeonCrawlerGame extends Application {
             // Draw player
             gc.setFill(Color.RED);
             gc.fillOval(
-                    MAP_WIDTH / 2 - TILE_SIZE / 2,
-                    MAP_HEIGHT / 2 - TILE_SIZE / 2,
-                    TILE_SIZE,
-                    TILE_SIZE
+                canvasWidth / 2 - TILE_SIZE / 2,
+                canvasHeight / 2 - TILE_SIZE / 2,
+                TILE_SIZE,
+                TILE_SIZE
             );
 
             // Draw fireball trail if animating
-            if (isFireballAnimating && !fireballTrailPositions.isEmpty()) {
+            if (isFireballAnimating && !fireballTrailPositions.isEmpty())  {
                 long elapsed = System.currentTimeMillis() - fireballAnimationStartTime;
                 if (elapsed > FIREBALL_DISPLAY_DURATION) {
                     isFireballAnimating = false;
@@ -757,8 +773,12 @@ public class DungeonCrawlerGame extends Application {
             if (gc == null) {
                 throw new IllegalStateException("Sidebar GraphicsContext is null");
             }
+            
+            double sidebarWidth = sidebarCanvas.getWidth();
+            double canvasHeight = sidebarCanvas.getHeight();
+            
             gc.setFill(Color.rgb(30, 30, 40));
-            gc.fillRect(0, 0, SIDEBAR_WIDTH, MAP_HEIGHT);
+            gc.fillRect(0, 0, sidebarWidth, canvasHeight);
 
             gc.setFont(Font.font("Courier New", 14));
             gc.setFill(Color.WHITE);
@@ -766,14 +786,25 @@ public class DungeonCrawlerGame extends Application {
             gc.setFont(Font.font("Courier New", 18));
             gc.fillText("Dungeon Journal", 20, 30);
             gc.setStroke(Color.GOLD);
-            gc.strokeLine(20, 35, SIDEBAR_WIDTH - 20, 35);
+            gc.strokeLine(20, 35, sidebarWidth - 20, 35);
 
             gc.setFont(Font.font("Courier New", 14));
 
             gc.fillText("Level: " + currentLevel, 20, 50);
             gc.fillText(String.format("Position: (%d, %d)", playerX, playerY), 20, 70);
+            gc.fillText("Controls:", 20, canvasHeight - 30);
+            gc.fillText("WASD/Arrows to move, Space to shoot fireball", 30, canvasHeight - 10);
             gc.fillText("Health: " + playerHealth, 20, 90);
 
+            if (gameOver) {
+                gc.setFill(Color.RED);
+                gc.setFont(Font.font("Courier New", 20));
+                if (playerHealth <= 0) {
+                    gc.fillText("Game Over! You died.", 20, canvasHeight / 2);
+                } else if (currentLevel >= MAX_LEVELS) {
+                    gc.fillText("Victory! Dungeon Conquered!", 20, canvasHeight / 2);
+                }
+            }
             String roomType = "";
             try {
                 switch (dungeonMap.getTileType(playerX, playerY)) {
