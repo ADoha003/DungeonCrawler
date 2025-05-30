@@ -138,4 +138,20 @@ public class StoryTeller {
             System.err.println("Error adding story fragment: " + e.getMessage());
         }
     }
+ // Add these methods to StoryTeller class
+    public void addGoldStory(int amount) {
+        try {
+            storyFragments.add("Collected " + amount + " gold!");
+        } catch (Exception e) {
+            System.err.println("Error adding gold story: " + e.getMessage());
+        }
+    }
+
+    public void addPotionStory() {
+        try {
+            storyFragments.add("Found a health potion!");
+        } catch (Exception e) {
+            System.err.println("Error adding potion story: " + e.getMessage());
+        }
+    }
 }

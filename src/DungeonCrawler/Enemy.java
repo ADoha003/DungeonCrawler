@@ -5,7 +5,7 @@ public class Enemy {
     private int health;
     private boolean alive;
     private boolean isBoss;
-
+    private int goldValue;
     public Enemy(int x, int y, int health, boolean isBoss) {
         try {
             if (health <= 0) {
@@ -23,9 +23,12 @@ public class Enemy {
             this.y = y;
             this.alive = true;
             this.isBoss = isBoss;
+            this.goldValue = isBoss ? 50 : 10;
         }
     }
-
+    public int getGoldValue() {
+        return goldValue;
+    }
     public int getX() {
         return x;
     }
