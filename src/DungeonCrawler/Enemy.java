@@ -1,58 +1,49 @@
 package DungeonCrawler;
 
-public class Enemy {
-    private int x, y;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+
+public class Enemy extends Entity {
     private int health;
-    private boolean alive;
     private boolean isBoss;
     private int goldValue;
+
     public Enemy(int x, int y, int health, boolean isBoss) {
+        super(x, y);
         try {
             if (health <= 0) {
                 throw new IllegalArgumentException("Enemy health must be positive");
             }
-            this.x = x;
-            this.y = y;
             this.health = health;
-            this.alive = true;
             this.isBoss = isBoss;
+            this.goldValue = isBoss ? 50 : 10;
         } catch (IllegalArgumentException e) {
             System.err.println("Error creating enemy: " + e.getMessage());
             this.health = isBoss ? 100 : 50;
-            this.x = x;
-            this.y = y;
-            this.alive = true;
-            this.isBoss = isBoss;
             this.goldValue = isBoss ? 50 : 10;
         }
     }
-    public int getGoldValue() {
-        return goldValue;
-    }
-    public int getX() {
-        return x;
-    }
 
-    public int getY() {
-        return y;
-    }
-
-    public void setPosition(int x, int y) {
+    @Override
+    public void render(GraphicsContext gc, double screenX, double screenY) {
         try {
-            this.x = x;
-            this.y = y;
+            gc.setFill(isBoss ? Color.PURPLE : Color.GREEN);
+            gc.fillRect(screenX, screenY, DungeonCrawlerGame.TILE_SIZE, DungeonCrawlerGame.TILE_SIZE);
         } catch (Exception e) {
-            System.err.println("Error setting enemy position: " + e.getMessage());
+            System.err.println("Error rendering enemy at (" + x + "," + y + "): " + e.getMessage());
         }
     }
 
-    public boolean isAlive() {
-        return alive;
+    public int getHealth() { return health; }
+    public void setHealth(int health) {
+        this.health = health;
+        if (health <= 0) {
+            alive = false;
+        }
     }
-
-    public boolean isBoss() {
-        return isBoss;
-    }
+    public boolean isBoss() { return isBoss; }
+    public int getGoldValue() { return goldValue; }
+    public void setAlive(boolean alive) { this.alive = alive; }
 
     public void takeDamage(int damage) {
         try {
@@ -63,10 +54,8 @@ public class Enemy {
             if (health <= 0) {
                 alive = false;
                 System.out.println("Enemy defeated at (" + x + "," + y + ")");
-            } else {
-                System.out.println("Enemy at (" + x + "," + y + ") took " + damage + " damage. Remaining health: " + health);
             }
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             System.err.println("Error applying damage: " + e.getMessage());
         }
     }

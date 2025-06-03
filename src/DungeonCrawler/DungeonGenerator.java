@@ -1,10 +1,6 @@
 package DungeonCrawler;
-/*
- * week 5 make the Dungeon Game to be more flexbil to be full size and improve the enemy terettory to be be only in room 
- * and to make render Sidebar more active with the chat
- */
-import java.util.Random;
 
+import java.util.Random;
 
 public class DungeonGenerator {
     private Random random;
@@ -21,8 +17,8 @@ public class DungeonGenerator {
             this.random = new Random(seed);
         } catch (IllegalArgumentException e) {
             System.err.println("Error initializing DungeonGenerator: " + e.getMessage());
-            this.width = 80;  // Increased default size
-            this.height = 60; // Increased default size
+            this.width = 40; // Fallback dimensions
+            this.height = 30;
             this.random = new Random(seed);
         }
     }
@@ -31,23 +27,34 @@ public class DungeonGenerator {
         try {
             TileType[][] map = new TileType[width][height];
 
+            // Initialize map with walls
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
                     map[x][y] = TileType.WALL;
                 }
             }
 
+            // Carve initial paths starting from center
             carve(map, width / 2, height / 2);
+            // Add rooms to the map
             addRooms(map, 5 + random.nextInt(5));
+            // Add doors between rooms and corridors
             addDoors(map);
 
             return new DungeonMap(map);
         } catch (Exception e) {
             System.err.println("Error generating dungeon: " + e.getMessage());
+            // Fallback map
             TileType[][] fallbackMap = new TileType[40][30];
             for (int x = 0; x < 40; x++) {
                 for (int y = 0; y < 30; y++) {
                     fallbackMap[x][y] = TileType.WALL;
+                }
+            }
+            // Create a minimal playable area
+            for (int x = 10; x < 30; x++) {
+                for (int y = 10; y < 20; y++) {
+                    fallbackMap[x][y] = TileType.ROOM;
                 }
             }
             return new DungeonMap(fallbackMap);
@@ -59,16 +66,18 @@ public class DungeonGenerator {
             if (x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1) return;
             if (map[x][y] != TileType.WALL) return;
 
+            // Count adjacent floor tiles
             int adjacent = 0;
             if (map[x + 1][y] == TileType.FLOOR) adjacent++;
             if (map[x - 1][y] == TileType.FLOOR) adjacent++;
             if (map[x][y + 1] == TileType.FLOOR) adjacent++;
             if (map[x][y - 1] == TileType.FLOOR) adjacent++;
 
-            if (adjacent > 1) return;
+            if (adjacent > 1) return; // Prevent over-carving
 
             map[x][y] = TileType.FLOOR;
 
+            // Randomize direction order
             int[] dirs = {0, 1, 2, 3};
             shuffleArray(dirs);
 
@@ -96,17 +105,19 @@ public class DungeonGenerator {
     private void addRooms(TileType[][] map, int roomCount) {
         try {
             for (int i = 0; i < roomCount; i++) {
-                int roomWidth = 5 + random.nextInt(3); // Larger rooms for enemies
+                int roomWidth = 5 + random.nextInt(3);
                 int roomHeight = 5 + random.nextInt(3);
                 int x = 1 + random.nextInt(width - roomWidth - 2);
                 int y = 1 + random.nextInt(height - roomHeight - 2);
 
+                // Carve room
                 for (int rx = x; rx < x + roomWidth; rx++) {
                     for (int ry = y; ry < y + roomHeight; ry++) {
                         map[rx][ry] = TileType.ROOM;
                     }
                 }
 
+                // Connect room to nearest corridor
                 connectRoom(map, x + roomWidth / 2, y + roomHeight / 2);
             }
         } catch (Exception e) {
@@ -146,6 +157,7 @@ public class DungeonGenerator {
             int nearestY = roomY;
             double nearestDist = Double.MAX_VALUE;
 
+            // Find nearest floor tile
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
                     if (map[x][y] == TileType.FLOOR) {
@@ -159,21 +171,27 @@ public class DungeonGenerator {
                 }
             }
 
-            int x = roomX;
-            int y = roomY;
-            while (x != nearestX || y != nearestY) {
-                if (x < nearestX) x++;
-                else if (x > nearestX) x--;
-
-                if (y < nearestY) y++;
-                else if (y > nearestY) y--;
-
-                if (map[x][y] == TileType.WALL) {
-                    map[x][y] = TileType.FLOOR;
+            // Carve path from room to nearest floor
+            int currentX = roomX;
+            int currentY = roomY;
+            while (currentX != nearestX || currentY != nearestY) {
+                if (currentX < nearestX) {
+                    currentX++;
+                } else if (currentX > nearestX) {
+                    currentX--;
+                } else if (currentY < nearestY) {
+                    currentY++;
+                } else if (currentY > nearestY) {
+                    currentY--;
+                }
+                if (currentX >= 0 && currentX < width && currentY >= 0 && currentY < height) {
+                    if (map[currentX][currentY] != TileType.ROOM) {
+                        map[currentX][currentY] = TileType.FLOOR;
+                    }
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error connecting room: " + e.getMessage());
+            System.err.println("Error connecting room at (" + roomX + "," + roomY + "): " + e.getMessage());
         }
     }
 
